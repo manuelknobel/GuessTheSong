@@ -6,12 +6,16 @@ import requests
 import configparser
 from albums import get_albums
 import random
+import re
+
+
+#Todo: Handle lyrics that couldn't be loaded!!
 
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-cid = config['DEFAULT']['cid']
-csecret = config['DEFAULT']['csecret']
+cid = '807c9dda3d3746448321ae2d407faa78'
+csecret = '0d910c898e074423920dc8231761da5c'
 
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=csecret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
@@ -20,8 +24,8 @@ sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 def scrape_lyrics(artistname, songname):
     artistname2 = str(artistname.replace(' ','-')) if ' ' in artistname else str(artistname)
     songname2 = str(songname.replace(' ','-')) if ' ' in songname else str(songname).lower()
-    print(songname2)
-    print(artistname2)
+    #print(songname2)
+    #print(artistname2)
     page = requests.get('https://genius.com/'+ artistname2 + '-' + songname2 + '-' + 'lyrics')
     html = BeautifulSoup(page.text, 'html.parser')
     lyrics1 = html.find_all("div", class_="lyrics")
@@ -41,13 +45,15 @@ def scrape_lyrics(artistname, songname):
 
 def lyrics_onto_frame(df1, song, artist_name):
     # Finde den Index des Songs im DataFrame
-    index_of_song = df1[df1['track'] == song].index.tolist()
+    songName = song['track']
+    #print(songName)
+    index_of_song = df1[df1['track'] == songName].index.tolist()
     
     # Stelle sicher, dass der Song im DataFrame vorhanden ist
     if index_of_song:
         index_of_song = index_of_song[0]
-        test = scrape_lyrics(artist_name, song)
-        print(test)
+        test = scrape_lyrics(artist_name, songName)
+        #print(test)
         
         # Füge die Lyrics nur für den bestimmten Song hinzu
         df1.loc[index_of_song, 'lyrics'] = test
@@ -82,6 +88,71 @@ def get_album_tracks(albums):
     
     return df2
 
+def removeBrackets(text):
+    cleaned_text = re.sub(r'\[.*?\]', '', text)
+    return cleaned_text
+
+import re
+
+import re
+
+import re
+
+import re
+
+import re
+
+def getChorus(lyrics):
+    if lyrics is not None and isinstance(lyrics, str):
+        pattern = re.compile(r'\[Chorus:?[^\]]*\](.*?)(?=\[.*?:|\Z)', re.IGNORECASE | re.DOTALL)
+        match = pattern.search(lyrics)
+
+        if match:
+            return match.group(1).strip()
+
+    return None
+
+
+
+
+
+
+def printLyricsPart(song, difficulty):
+
+    lyrics = song['lyrics']
+    chorus = getChorus(lyrics)
+    cleaned_lyrics = removeBrackets(lyrics)
+
+
+    if difficulty.lower() == 'hard':
+        words = re.findall(r'\b\w+\b', cleaned_lyrics)
+        startpunkt = random.randint(0, len(words) - 40)
+
+        auswahl = words[startpunkt:startpunkt + 40]
+
+        print(' '.join(auswahl))
+
+    elif difficulty.lower() == 'medium':
+        words = re.findall(r'\b\w+\b', cleaned_lyrics)
+        startpunkt = random.randint(0, len(words) - 80)
+
+        auswahl = words[startpunkt:startpunkt + 80]
+
+        print(' '.join(auswahl))
+
+    elif difficulty.lower() == 'easy':
+        if chorus:
+            print(chorus)
+        else:
+            print(cleaned_lyrics)
+    
+    else:
+        print(cleaned_lyrics)
+       
+
+
+
+
 
 def main():
     albums = get_albums()
@@ -89,12 +160,24 @@ def main():
 
 
     random_number = random.randint(0, 184)
-    single_song = songs.iloc[random_number, 1]
-    print(single_song)
-    songs_with_lyrics = lyrics_onto_frame(songs, single_song, 'Kanye west')
+    single_song = songs.iloc[random_number]
+    #print(single_song)
+    lyrics_onto_frame(songs, single_song, 'Kanye west')
 
 
-    print(songs.iloc[random_number])
+    #update single song
+    single_song = songs.iloc[random_number]
+
+    #print(single_song)
+
+    print("Enter the difficulty you want to play the game with")
+
+    difficulty = input("Possibilitys are hard, medium and easy: ")
+
+    printLyricsPart(single_song, difficulty)
+
+    print("Enter your first guess")
+    
 
 
 
