@@ -7,15 +7,18 @@ import configparser
 from albums import get_albums
 import random
 import re
+import heapq
 
 
-#Todo: Handle lyrics that couldn't be loaded!!
+#To do List:
+#  Abständbe bei lyrics, manchaml hat es keine Punkte und zwei Wörter sind zusammen
+# Error Handling wenn die Lyrics nicht geholt werden können, dann einfach neuer song direkt
 
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-cid = '807c9dda3d3746448321ae2d407faa78'
-csecret = '0d910c898e074423920dc8231761da5c'
+cid = config['DEFAULT']['cid']
+csecret = config['DEFAULT']['csecret']
 
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=csecret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
@@ -92,15 +95,7 @@ def removeBrackets(text):
     cleaned_text = re.sub(r'\[.*?\]', '', text)
     return cleaned_text
 
-import re
 
-import re
-
-import re
-
-import re
-
-import re
 
 def getChorus(lyrics):
     if lyrics is not None and isinstance(lyrics, str):
@@ -111,11 +106,6 @@ def getChorus(lyrics):
             return match.group(1).strip()
 
     return None
-
-
-
-
-
 
 def printLyricsPart(song, difficulty):
 
@@ -146,41 +136,108 @@ def printLyricsPart(song, difficulty):
         else:
             print(cleaned_lyrics)
     
-    else:
-        print(cleaned_lyrics)
+ 
+def printFullLyrics(song):
+    lyrics = song['lyrics']
+    cleaned_lyrics = removeBrackets(lyrics)
+    print(cleaned_lyrics)
+
        
-
-
+def seeRecord(guessRecord):
+    if guessRecord == {}: 
+        print("Spiele das Spiel erstmal, bevor du dir den Record anschaust")
+        return
+    else:
+        smallesValues = heapq.nsmallest(3, guessRecord.items(), key=lambda x: x[1])
+        print("Deine drei besten Songs!")
+        for song, value in smallesValues:
+            print(f"Song: {song}, Anzahl Versuche: {value}")
 
 
 
 def main():
     albums = get_albums()
     songs = get_album_tracks(albums)
+    global play_again
+    play_again = 'yes'
 
+    guess_record = {}
 
-    random_number = random.randint(0, 184)
-    single_song = songs.iloc[random_number]
-    #print(single_song)
-    lyrics_onto_frame(songs, single_song, 'Kanye west')
-
-
-    #update single song
-    single_song = songs.iloc[random_number]
-
-    #print(single_song)
-
-    print("Enter the difficulty you want to play the game with")
-
-    difficulty = input("Possibilitys are hard, medium and easy: ")
-
-    printLyricsPart(single_song, difficulty)
-
-    print("Enter your first guess")
+ 
     
+    def navigation():
+        print("1: See Record: ")
+        print("2: Play the game: ")
+        print("3: Exit: ")
 
+    def game():
+        global play_again
+        while play_again.lower() == 'yes':
+            
+            random_number = random.randint(0, 184)
+            single_song = songs.iloc[random_number]
+            #print(single_song)
+            lyrics_onto_frame(songs, single_song, 'Kanye west')
 
+            single_song = songs.iloc[random_number]
 
+            print("Enter the difficulty you want to play the game with")
+
+            difficulty = input("Possibilitys are hard, medium and easy: ")
+
+            guess = None
+            guessCount = 1
+
+            while guess != single_song['track']:
+
+                printLyricsPart(single_song, difficulty)
+
+                guess = input("Enter your guess: ")
+
+                if guess.lower() == single_song['track'].lower():
+                    print(f"You won with {guessCount} needed guesses!")
+                    guess_record[single_song['track']] = guessCount
+                    break
+
+                if guessCount >= 10:
+                    endGame = input("You already needed 10 guesses, do you want to know the name of the song?")
+                    if endGame.lower() == 'yes':
+                        print("The song was")
+                        print(single_song['track'])
+                        guess_record[single_song] = guessCount
+                        break
+                    else:
+                        continue
+                else:
+                    print("Wrong guess, try again")
+                    guessCount += 1
+                    difficulty = input("Enter the new difficulty, if you want to change it, enter stop if you want to stop and know the song Name: ")
+                    if difficulty.lower() == 'stop':
+                        print("The song was")
+                        print(single_song['track'])
+                        break
+
+            print("Play again?")
+            play_again = input("Yes or No:")
+
+    print("Welcome to the Kanye West Guess the Song Game")
+    print("You will be given a part of the lyrics and you have to guess the song")
+    
+    while True:
+        print("----------------------------------------------")
+        navigation()
+        choice = input("Enter your choice: ")
+        if choice == '1':
+            seeRecord(guess_record)
+        elif choice == '2':
+            game()
+        elif choice == '3':
+            break
+        else:
+            print("Invalid Choice")
+            continue
+
+        
 if __name__ == "__main__":
     main()
 
