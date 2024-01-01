@@ -107,11 +107,18 @@ def getChorus(lyrics):
 
     return None
 
+def fixSpaces(text):
+    fixed_text = re.sub(r'([A-Z])', r' \1', text)
+    return fixed_text
+
+
+
 def printLyricsPart(song, difficulty):
 
     lyrics = song['lyrics']
-    chorus = getChorus(lyrics)
-    cleaned_lyrics = removeBrackets(lyrics)
+    fixedLyrics = fixSpaces(lyrics)
+    chorus = getChorus(fixedLyrics)
+    cleaned_lyrics = removeBrackets(fixedLyrics)
 
 
     if difficulty.lower() == 'hard':
@@ -135,11 +142,16 @@ def printLyricsPart(song, difficulty):
             print(chorus)
         else:
             print(cleaned_lyrics)
+
+    else:
+        difficulty = input("Enter a correct difficulty: ")
+        printLyricsPart(song, difficulty)
     
  
 def printFullLyrics(song):
     lyrics = song['lyrics']
-    cleaned_lyrics = removeBrackets(lyrics)
+    fixedLyrics = fixSpaces(lyrics)
+    cleaned_lyrics = removeBrackets(fixedLyrics)
     print(cleaned_lyrics)
 
        
@@ -204,7 +216,7 @@ def main():
                     if endGame.lower() == 'yes':
                         print("The song was")
                         print(single_song['track'])
-                        guess_record[single_song] = guessCount
+                        guess_record[single_song['track']] = guessCount
                         break
                     else:
                         continue
@@ -230,6 +242,7 @@ def main():
         if choice == '1':
             seeRecord(guess_record)
         elif choice == '2':
+            play_again = 'yes'
             game()
         elif choice == '3':
             break
