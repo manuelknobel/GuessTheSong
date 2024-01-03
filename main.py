@@ -17,8 +17,8 @@ import heapq
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-cid = config['DEFAULT']['cid']
-csecret = config['DEFAULT']['csecret']
+cid ='807c9dda3d3746448321ae2d407faa78'
+csecret ='0d910c898e074423920dc8231761da5c'
 
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=csecret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
@@ -129,6 +129,8 @@ def printLyricsPart(song, difficulty):
 
         print(' '.join(auswahl))
 
+        return ' '.join(auswahl)
+
     elif difficulty.lower() == 'medium':
         words = re.findall(r'\b\w+\b', cleaned_lyrics)
         startpunkt = random.randint(0, len(words) - 80)
@@ -136,12 +138,15 @@ def printLyricsPart(song, difficulty):
         auswahl = words[startpunkt:startpunkt + 80]
 
         print(' '.join(auswahl))
+        return ' '.join(auswahl)
 
     elif difficulty.lower() == 'easy':
         if chorus:
             print(chorus)
+            return chorus
         else:
             print(cleaned_lyrics)
+            return cleaned_lyrics
 
     else:
         difficulty = input("Enter a correct difficulty: ")
