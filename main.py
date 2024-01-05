@@ -3,16 +3,11 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from bs4 import BeautifulSoup
 import requests
-from albums import get_albums
 import random
 import re
 import heapq
 import json
-import traceback
-
-
-#To do List:
-# Schauen das alle lyrics geholt werden können (im in it)
+from albums import get_albums
 
 
 with open('config.json') as json_file:
@@ -22,47 +17,46 @@ cid = config_data['DEFAULT']['cid']
 csecret = config_data['DEFAULT']['csecret']
 
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=csecret)
-sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
+sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 
 def scrape_lyrics(artistname, songname):
-    artistname2 = str(artistname.replace(' ','-')) if ' ' in artistname else str(artistname)
-    songname2 = str(songname.replace(' ','-')) if ' ' in songname else str(songname).lower()
-    #print(songname2)
-    #print(artistname2)
-    page = requests.get('https://genius.com/'+ artistname2 + '-' + songname2 + '-' + 'lyrics')
-    html = BeautifulSoup(page.text, 'html.parser')
-    lyrics1 = html.find_all("div", class_="lyrics")
-    lyrics2 = html.find_all("div", class_="Lyrics__Container-sc-1ynbvzw-1 kUgSbL")
+    try:
+        artistname2 = str(artistname.replace(' ', '-')) if ' ' in artistname else str(artistname)
+        songname2 = str(songname.replace(' ', '-')) if ' ' in songname else str(songname).lower()
 
-    lyrics = None
-    if lyrics1:
-        lyrics_elements = [element.get_text() for element in lyrics1]
-        lyrics = '\n'.join(lyrics_elements)
-    elif lyrics2:
-        lyrics_elements = [element.get_text() for element in lyrics2]
-        lyrics = '\n'.join(lyrics_elements)
+        page = requests.get('https://genius.com/' + artistname2 + '-' + songname2 + '-' + 'lyrics')
+        html = BeautifulSoup(page.text, 'html.parser')
+        lyrics1 = html.find_all("div", class_="lyrics")
+        lyrics2 = html.find_all("div", class_="Lyrics__Container-sc-1ynbvzw-1 kUgSbL")
 
-    elif lyrics1 == lyrics2 == None:
         lyrics = None
-    return lyrics
+        if lyrics1:
+            lyrics_elements = [element.get_text() for element in lyrics1]
+            lyrics = '\n'.join(lyrics_elements)
+        elif lyrics2:
+            lyrics_elements = [element.get_text() for element in lyrics2]
+            lyrics = '\n'.join(lyrics_elements)
+
+        return lyrics
+
+    except Exception as e:
+        print(f"Error scraping lyrics: {e}")
+        return None
+
 
 def lyrics_onto_frame(df1, song, artist_name):
-    # Finde den Index des Songs im DataFrame
-    songName = song['track']
-    #print(songName)
-    index_of_song = df1[df1['track'] == songName].index.tolist()
-    
-    # Stelle sicher, dass der Song im DataFrame vorhanden ist
-    if index_of_song:
-        index_of_song = index_of_song[0]
-        test = scrape_lyrics(artist_name, songName)
-        #print(test)
-        
-        # Füge die Lyrics nur für den bestimmten Song hinzu
-        df1.loc[index_of_song, 'lyrics'] = test
-        
-    
+    try:
+        songName = song['track']
+        index_of_song = df1[df1['track'] == songName].index.tolist()
+
+        if index_of_song:
+            index_of_song = index_of_song[0]
+            lyrics = scrape_lyrics(artist_name, songName)
+            df1.loc[index_of_song, 'lyrics'] = lyrics
+
+    except Exception as e:
+        print(f"Error adding lyrics to DataFrame: {e}")
 
 
 def get_album_tracks(albums):
@@ -71,31 +65,31 @@ def get_album_tracks(albums):
     duration = []
     explicit = []
     track_number = []
-    
+
     for album_key, album_value in albums.items():
         one = sp.album_tracks(album_value, limit=50, offset=0, market='US')
         df1 = pd.DataFrame(one)
-        
+
         for i, x in df1['items'].items():
             uri.append(x['uri'])
             track.append(x['name'])
             duration.append(x['duration_ms'])
             explicit.append(x['explicit'])
             track_number.append(x['track_number'])
-        
+
     df2 = pd.DataFrame({
-    'uri':uri,
-    'track':track,
-    'duration_ms':duration,
-    'explicit':explicit,
-    'track_number':track_number})
-    
+        'uri': uri,
+        'track': track,
+        'duration_ms': duration,
+        'explicit': explicit,
+        'track_number': track_number})
+
     return df2
+
 
 def removeBrackets(text):
     cleaned_text = re.sub(r'\[.*?\]', '', text)
     return cleaned_text
-
 
 
 def getChorus(lyrics):
@@ -111,8 +105,6 @@ def getChorus(lyrics):
     return match
 
 
-
-
 def fixSpaces(text):
     try:
         fixed_text = re.sub(r'([A-Z])', r' \1', text)
@@ -121,36 +113,28 @@ def fixSpaces(text):
         return text
 
 
-
 def printLyricsPart(song, difficulty):
-
     lyrics = song['lyrics']
-    
+
     if lyrics is None:
         print("Lyrics not available. Stopping the current game ")
         return "Navigation"
-    
+
     fixedLyrics = fixSpaces(lyrics)
     chorus = getChorus(fixedLyrics)
     cleaned_lyrics = removeBrackets(fixedLyrics)
 
-
     if difficulty.lower() == 'hard':
         words = re.findall(r'\b\w+\b', cleaned_lyrics)
         startpunkt = random.randint(0, len(words) - 40)
-
         auswahl = words[startpunkt:startpunkt + 40]
-
         print(' '.join(auswahl))
-
         return ' '.join(auswahl)
 
     elif difficulty.lower() == 'medium':
         words = re.findall(r'\b\w+\b', cleaned_lyrics)
         startpunkt = random.randint(0, len(words) - 80)
-
         auswahl = words[startpunkt:startpunkt + 80]
-
         print(' '.join(auswahl))
         return ' '.join(auswahl)
 
@@ -165,25 +149,23 @@ def printLyricsPart(song, difficulty):
     else:
         difficulty = input("Enter a correct difficulty: ")
         printLyricsPart(song, difficulty)
-    
- 
+
+
 def printFullLyrics(song):
     lyrics = song['lyrics']
     fixedLyrics = fixSpaces(lyrics)
     cleaned_lyrics = removeBrackets(fixedLyrics)
     print(cleaned_lyrics)
 
-       
+
 def seeRecord(guessRecord):
-    if guessRecord == {}: 
+    if guessRecord == {}:
         print("Spiele das Spiel erstmal, bevor du dir den Record anschaust")
-        return
     else:
         smallesValues = heapq.nsmallest(3, guessRecord.items(), key=lambda x: x[1])
         print("Deine drei besten Songs!")
         for song, value in smallesValues:
             print(f"Song: {song}, Anzahl Versuche: {value}")
-
 
 
 def main():
@@ -194,8 +176,6 @@ def main():
 
     guess_record = {}
 
- 
-    
     def navigation():
         print("1: See Record: ")
         print("2: Play the game: ")
@@ -204,10 +184,9 @@ def main():
     def game():
         global play_again
         while play_again.lower() == 'yes':
-            
+
             random_number = random.randint(0, 184)
             single_song = songs.iloc[random_number]
-            #print(single_song)
             lyrics_onto_frame(songs, single_song, 'Kanye west')
 
             single_song = songs.iloc[random_number]
@@ -245,11 +224,12 @@ def main():
                 else:
                     print("Wrong guess, try again")
                     guessCount += 1
-                    difficulty = input("Enter the new difficulty, if you want to change it, enter stop if you want to stop and know the song Name: ")
+                    difficulty = input(
+                        "Enter the new difficulty, if you want to change it, enter stop if you want to stop and know the song Name: ")
                     if difficulty.lower() == 'stop':
                         print("The song was")
                         print(single_song['track'])
-                        #printFullLyrics(single_song)
+                        # printFullLyrics(single_song)
                         break
 
             print("Play again?")
@@ -257,7 +237,7 @@ def main():
 
     print("Welcome to the Kanye West Guess the Song Game")
     print("You will be given a part of the lyrics and you have to guess the song")
-    
+
     while True:
         print("----------------------------------------------")
         navigation()
@@ -273,6 +253,6 @@ def main():
             print("Invalid Choice")
             continue
 
-        
+
 if __name__ == "__main__":
     main()
