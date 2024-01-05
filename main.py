@@ -12,8 +12,7 @@ import traceback
 
 
 #To do List:
-#  Abständbe bei lyrics, manchaml hat es keine Punkte und zwei Wörter sind zusammen
-# Error Handling wenn die Lyrics nicht geholt werden können, dann einfach neuer song direkt
+# Schauen das alle lyrics geholt werden können (im in it)
 
 
 with open('config.json') as json_file:
@@ -128,8 +127,8 @@ def printLyricsPart(song, difficulty):
     lyrics = song['lyrics']
     
     if lyrics is None:
-        print("Lyrics not available. Returning to navigation. please ")
-        return
+        print("Lyrics not available. Stopping the current game ")
+        return "Navigation"
     
     fixedLyrics = fixSpaces(lyrics)
     chorus = getChorus(fixedLyrics)
@@ -222,7 +221,10 @@ def main():
 
             while guess != single_song['track']:
 
-                printLyricsPart(single_song, difficulty)
+                lyrics = printLyricsPart(single_song, difficulty)
+
+                if lyrics == "Navigation":
+                    break
 
                 guess = input("Enter your guess: ")
 
