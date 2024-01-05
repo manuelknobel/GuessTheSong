@@ -3,22 +3,24 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from bs4 import BeautifulSoup
 import requests
-import configparser
 from albums import get_albums
 import random
 import re
 import heapq
+import json
+import traceback
 
 
 #To do List:
 #  Abständbe bei lyrics, manchaml hat es keine Punkte und zwei Wörter sind zusammen
 # Error Handling wenn die Lyrics nicht geholt werden können, dann einfach neuer song direkt
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
-cid ='807c9dda3d3746448321ae2d407faa78'
-csecret ='0d910c898e074423920dc8231761da5c'
+with open('config.json') as json_file:
+    config_data = json.load(json_file)
+
+cid = config_data['DEFAULT']['cid']
+csecret = config_data['DEFAULT']['csecret']
 
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=csecret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
@@ -98,24 +100,37 @@ def removeBrackets(text):
 
 
 def getChorus(lyrics):
+    match = None
     if lyrics is not None and isinstance(lyrics, str):
-        pattern = re.compile(r'\[Chorus:?[^\]]*\](.*?)(?=\[.*?:|\Z)', re.IGNORECASE | re.DOTALL)
+        pattern = re.compile(r'\[Chorus\](.*?)(?=\[.*?\]|$)', re.IGNORECASE | re.DOTALL)
+
         match = pattern.search(lyrics)
 
         if match:
-            return match.group(1).strip()
+            match = match.group(1).strip()
 
-    return None
+    return match
+
+
+
 
 def fixSpaces(text):
-    fixed_text = re.sub(r'([A-Z])', r' \1', text)
-    return fixed_text
+    try:
+        fixed_text = re.sub(r'([A-Z])', r' \1', text)
+        return fixed_text
+    except:
+        return text
 
 
 
 def printLyricsPart(song, difficulty):
 
     lyrics = song['lyrics']
+    
+    if lyrics is None:
+        print("Lyrics not available. Returning to navigation. please ")
+        return
+    
     fixedLyrics = fixSpaces(lyrics)
     chorus = getChorus(fixedLyrics)
     cleaned_lyrics = removeBrackets(fixedLyrics)
@@ -232,6 +247,7 @@ def main():
                     if difficulty.lower() == 'stop':
                         print("The song was")
                         print(single_song['track'])
+                        #printFullLyrics(single_song)
                         break
 
             print("Play again?")
@@ -258,5 +274,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-
-#URI: spotify:playlist:10HzxiUA71aMAjGHcezh6p
